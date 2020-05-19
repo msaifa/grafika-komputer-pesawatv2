@@ -1,0 +1,277 @@
+    #include <stdlib.h>
+    #include <GL/glut.h>
+    #include <math.h>
+    #include <time.h>
+    #include <stdio.h>
+    #include <string.h>
+
+    typedef struct
+    {
+        float x;
+        float y;
+    }point2D_t;
+
+    typedef struct
+    {
+        float v[3];
+    }vector2D_t;
+
+    typedef struct
+    {
+        float m[3][3];
+    } matrix2D_t;
+
+    typedef struct
+    {
+        float r, g, b;
+    } color_t;
+
+
+    point2D_t Vector2Point1(vector2D_t vec)
+    {
+        point2D_t pnt;
+        pnt.x = vec.v[0];
+        pnt.y = vec.v[1];
+        return pnt;
+    }
+
+    vector2D_t Point2Vector1(point2D_t pnt)
+    {
+        vector2D_t vec;
+        vec.v[0] = pnt.x;
+        vec.v[1] = pnt.y;
+        vec.v[2] = 1.;
+        return vec;
+    }
+
+
+    void setColor(float r, float g, float b)
+    {
+        glColor3f(r, g, b);
+    }
+
+    void setColor(color_t col)
+    {
+        glColor3f(col.r, col.g, col.b);
+    }
+
+    //fungsi untuk membuat titik
+    void drawDot(float x, float y)
+    {
+
+        glPointSize(3);
+        glBegin(GL_POINTS);
+        glVertex2f(x, y);
+        glEnd();
+    }
+
+    //fungsi untuk membuat garis
+    void drawLine(float x1, float y1, float x2, float y2)
+    {
+
+        glBegin(GL_LINES);
+        glVertex2f(x1, y1);
+        glVertex2f(x2, y2);
+        glEnd();
+    }
+
+    //fungsi yang digunakan untuk menggambar garis
+    void drawPolyline(point2D_t p[], int n)
+    {
+        int i;
+        glBegin(GL_LINE_STRIP);
+        for (i = 0; i < n; i++)
+            glVertex2f(p[i].x, p[i].y);
+        glEnd();
+    }
+
+    //fungsi untuk menggambar garis dengan bentuk kurva tertutup
+    void drawPolygon(point2D_t p[], int n)
+    {
+        int i;
+        glBegin(GL_LINE_LOOP);
+        for (i = 0; i < n; i++)
+            glVertex2f(p[i].x, p[i].y);
+        glEnd();
+    }
+
+    //fungsi untuk mewarnai area poligon dengan satu warna
+    void fillPolygon(point2D_t pnt[], int n, color_t color)
+    {
+        int i;
+        setColor(color);
+        glBegin(GL_POLYGON);
+        for (i = 0; i < n; i++) {
+            glVertex2f(pnt[i].x, pnt[i].y);
+        }
+        glEnd();
+    }
+
+    //fungsi yang menghasilkan efek gradasi jika digunakan untuk mewarnai pada poligon
+    void gradatePolygon(point2D_t p[], int n, color_t col[])
+    {
+        int i;
+        glBegin(GL_POLYGON);
+        for (i = 0; i < n; i++)
+        {
+            setColor(col[i]);
+            glVertex2f(p[i].x, p[i].y);
+        }
+        glEnd();
+    }
+
+    //fungsi yang menghasilkan efek gradasi jika digunakan untuk mewarnai pada lingkaran
+    void centerPolygon(point2D_t p[], point2D_t pc, color_t col, color_t colp, int n)
+    {
+        int i;
+        glBegin(GL_LINES);
+        for (i = 0; i < n; i++)
+        {
+            setColor(colp);
+            glVertex2f(pc.x, pc.y);
+            setColor(col);
+            glVertex2f(p[i].x, p[i].y);
+        }
+        glEnd();
+    }
+
+
+    // Definisi dan pengolahan matrik
+    matrix2D_t createIdentity(void) {
+        matrix2D_t u;
+        int i, j;
+        for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++) u.m[i][j] = 0.;
+            u.m[i][i] = 1.;
+        }
+        return u;
+    }
+
+    // untuk membuat efek translasi(bergerak)
+    matrix2D_t translationMTX(float dx, float dy)
+    {
+        matrix2D_t trans = createIdentity();
+        trans.m[0][2] = dx;
+        trans.m[1][2] = dy;
+        return trans;
+    }
+
+    // untuk membuat efek scaling(berubah ukuran)
+    matrix2D_t scalingMTX(float mx, float my)
+    {
+        matrix2D_t scale = createIdentity();
+        scale.m[0][0] = mx;
+        scale.m[1][1] = my;
+        return scale;
+    }
+
+    // untuk membuat efek rotasi(berputar)
+    matrix2D_t rotationMTX(float theta)
+    {
+        matrix2D_t rotate = createIdentity();
+        float cs = cos(theta);
+        float sn = sin(theta);
+        rotate.m[0][0] = cs; rotate.m[0][1] = -sn;
+        rotate.m[1][0] = sn; rotate.m[1][1] = cs;
+        return rotate;
+    }
+
+    matrix2D_t operator * (matrix2D_t a, matrix2D_t b)
+    {
+        matrix2D_t c;//c=a*b
+        int i, j, k;
+        for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) {
+            c.m[i][j] = 0;
+            for (k = 0; k < 3; k++)
+                c.m[i][j] += a.m[i][k] * b.m[k][j];
+        }
+        return c;
+    }
+
+    vector2D_t operator * (matrix2D_t a, vector2D_t b)
+    {
+        vector2D_t c;//c=a*b
+        int i, j;
+        for (i = 0; i < 3; i++) {
+            c.v[i] = 0;
+            for (j = 0; j < 3; j++)
+                c.v[i] += a.m[i][j] * b.v[j];
+        }
+        return c;
+    }
+
+    // fungsi untuk menampilkan tulisan
+    void bitmap_output(int x, int y, char *string, void *font, color_t color)
+    {
+        int len, i;
+        setColor(color);
+        glRasterPos2f(x, y);
+        len = (int)strlen(string);
+        for (i = 0; i < len; i++) {
+            glutBitmapCharacter(font, string[i]);
+        }
+    }
+
+    // fungsi yang digunakan untuk membuat ellipse
+    static void createEllipse(point2D_t p[], point2D_t p0, float r1, float r2)
+    {
+        for (int i = 0; i < 360; i++) {
+            p[i].x = p0.x + r1 * cos(i / 57.3);
+            p[i].y = p0.y + r2 * sin(i / 57.3);
+        }
+    }
+
+
+    void background(){
+        point2D_t savana[4] = { {0,0},{1200,0},{1200,166},{0,166} };
+        point2D_t
+            gabahA[360], kgabahA = { 321,166 },
+            gabahB[360], kgabahB = { 383,164 },
+            gabahC[360], kgabahC = { 829,164 },
+            gabahD[360], kgabahD = { 872,164 },
+            gabahE[360], kgabahE = { 941,164 },
+            matahari[360], kmatahari = {1168, 670} ;
+
+        color_t hijaurumput = { 0.48,0.67,0.13 };
+        color_t wgabahA = { 0.19,0.61,0.19 } ;
+        color_t wgabahB = { 0.83,0.86,0.18 } ;
+        color_t wgabahC = { 0.81,0.8,0.16 } ;
+        color_t wmatahari = { 1,0.8,0.3 } ;
+
+        createEllipse(gabahE, kgabahE, 90, 90);
+        fillPolygon(gabahE, 360, wgabahB);
+        createEllipse(gabahC, kgabahC, 110, 110);
+        fillPolygon(gabahC, 360, wgabahC);
+        createEllipse(gabahB, kgabahB, 110, 110);
+        fillPolygon(gabahB, 360, wgabahB);
+        createEllipse(gabahA, kgabahA, 60, 50);
+        fillPolygon(gabahA, 360, wgabahA);
+        createEllipse(gabahD, kgabahD, 70, 80);
+        fillPolygon(gabahD, 360, wgabahA);
+        createEllipse(matahari, kmatahari, 80, 80);
+        fillPolygon(matahari, 360, wmatahari);
+
+        fillPolygon(savana, 4, hijaurumput);
+    }
+
+
+    void pepohonan(){
+        point2D_t pohon1[8] = { {80,150},{81,258},{76,267},{58,271},{90,269},{103,277},{94,261},{100,150} };
+        point2D_t pohon1DaunA[43] = { {80,232},{71,231},{60,237},{52,235},{46,239},{43,248},{34,249},{25,256},{25,265},{19,268},{13,280},{15,294},{19,296},{14,311},{15,320},{21,327},{20,340},{24,350},{31,348},{31,361},{39,370},{49,371},{57,381},{70,383},{77,381} ,{85,388} ,{96,385} ,{102,377} ,{116,376} ,{122,364} ,{141,350} ,{140,340} ,{147,325} ,{147,309} ,{149,286} ,{143,276} ,{135,277} ,{123,262} ,{126,256} ,{120,243} ,{120,243} ,{105,236} ,{96,236} } ;
+
+        point2D_t pohon2A[6] = { {219,151} ,{232,150} ,{231,274} ,{236,288} ,{225,292} ,{222,275}} ;
+        point2D_t pohon2B[3] = { {221,274},{212,291},{224,282} } ;
+        point2D_t pohon2C[3] = { {225,285},{227,345},{230,285} } ;
+        point2D_t pohon2D[3] = { {230,290},{245,310},{230,272} } ;
+        point2D_t
+            pohon2DaunA[360], kpohon2DaunA = { 200,291 },
+            pohon2DaunB[360], kpohon2DaunB = { 220,340 },
+            pohon2DaunC[360], kpohon2DaunC = { 254,304 } ;
+
+        point2D_t pohon3A[7] = {{1002,150} ,{1021,149} ,{1019,251} ,{1014,262} ,{1011,297} ,{1007,265} ,{1003,256}} ;
+        point2D_t pohon3B[3] = {{1004,255}, {988,275}, {1005,263}} ;
+        point2D_t pohon3C[3] = {{1016,255}, {1036,266}, {1019,247}} ;
+        point2D_t
+            pohon3DaunA[360], kpohon3DaunA = { 1010,313 } ;
+
+        point2D_t pohon4A[5] = {{1131,150} ,{1145,150} ,{1144,291} ,{1139,336} ,

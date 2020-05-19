@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1574133839 source:/media/msaifa/Primary/Pendidikan/Grafika Komputer/UAS/main.cpp
+	<stdlib.h>
+	<GL/glut.h>
+	<math.h>
+	<time.h>
+	<stdio.h>
+	<string.h>
+
